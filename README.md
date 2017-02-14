@@ -42,9 +42,6 @@ JIRATICKET-3571 <= discovered while testing <= JIRATICKET-3126
 Fetching JIRATICKET-2977
 JIRATICKET-2977 => blocks => JIRATICKET-2451
 
-Google Chart request:
-http://chart.apis.google.com/chart?cht=gv&chl=digraph{"JIRATICKET-2451"->"JIRATICKET-3853"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-3968"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-3126"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-2977"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-3853"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3853"->"JIRATICKET-3968"[arrowhead=empty][label="relates+to"];"JIRATICKET-3968"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3968"->"JIRATICKET-3853"[arrowhead=empty][label="relates+to"];"JIRATICKET-3126"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3126"->"JIRATICKET-3571"[arrowhead=empty][label="testing+discovered"];"JIRATICKET-3571"->"JIRATICKET-3126"[arrowhead=empty][label="discovered+while+testing"]    ;"JIRATICKET-2977"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"]}
-
 Writing to issue_graph.png
 
 ```
@@ -58,7 +55,7 @@ If you have issues with the Google Graphviz API limitations you can use your loc
 ```bash
 $ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
 $ cd jira-dependency-graph
-$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --local issue-key | dot -Tpng > issue_graph.png
+$ python jira-dependency-graph.py --user=<username> --password=<password> --jira=https://boxdice.atlassian.net --local --issues "<issue key>" --hide-done "Done" "Closed" "WONT DO" > backlog-fixed.graph
 ```
 
 *Note*: Its possible that the graph produced is too wide if you have a number of issues. In this case, it is better to firstly pipe the graph to a 'dot' text file e.g.
@@ -81,7 +78,7 @@ Advanced Usage:
 In case you have specific issue links you don't want to see in your graph, you can exclude them:
 
 ```bash
-$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --exclude-link 'is required by' --exclude-link 'duplicates' issue-key
+$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --exclude-link 'is required by' --exclude-link 'duplicates' --issues issue-key
 ```
 
 The grapher will still walk the link, just exclude the edge. This especially useful for bidirectional links and you only
@@ -95,9 +92,9 @@ In order to only specify issues with a certain prefix pass in `--issue-include <
 
 It is possible to either use the username/password combination or to login via the browser passing in `--cookie <JSESSIONID>`. This logins via the browser and is useful in scenarios where Kerberos authentication is required.
 
-### Closed Issues
+### ??Closed Issues
 
-By passing in `--ignore-closed` the system will ignore any ticket that is closed.
+??By passing in `--ignore-closed` the system will ignore any ticket that is closed.
 
 ### Multiple Issues
 
