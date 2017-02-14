@@ -122,14 +122,13 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         children = []
         fields = issue['fields']
         seen.append(issue_key)
+        log(fields['status']['name'])
         if fields['status']['name'] not in done:
           if ignore_closed:
               log('Verifying issue key ' + issue_key + ' is not closed : ' + issue['fields']['status']['name'])
               if issue['fields']['status']['name'] in done:
                   return graph
-
           graph.append('"%s(%s)"' % (issue_key, fields['summary']))
-
           if fields['issuetype']['name'] == 'Epic':
               issues = jira.query('"Epic Link" = "%s"' % issue_key)
               for subtask in issues:
@@ -156,7 +155,6 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
                     if issue['fields']['status']['name'] not in done:
                       children.append(result[0])
                       if result[1] is not None:
-                        log("result[1]" + result[1])
                         graph.append(result[1])
           # now construct graph data for all subtasks and links of this issue
         else:
@@ -201,12 +199,12 @@ def parse_args():
     parser.add_argument('-f', '--file', dest='image_file', default='issue_graph.png', help='Filename to write image to')
     parser.add_argument('-l', '--local', action='store_true', default=False, help='Render graphviz code to stdout')
     parser.add_argument('-x', '--exclude-link', dest='excludes', default=[], action='append', help='Exclude link type(s)')
-    parser.add_argument('-D', '--hide-done', dest='done', default=['Done', 'Closed', 'WONT DO'], help='insert magical jira query')
+    parser.add_argument('-D', '--hide-done', dest='done', default=['Done', 'Closed', 'WONT DO'], help='insert magical jira query', nargs='*')
     parser.add_argument('--ignore-closed', dest='closed', action='store_true', default=False, help='Ignore closed issues')
     parser.add_argument('-i', '--issue-include', dest='includes', default='', help='Include issue keys')
     parser.add_argument('-s', '--show-directions', dest='show_directions', default=['inward', 'outward'], help='which directions to show (inward,outward)')
     parser.add_argument('-d', '--directions', dest='directions', default=['inward', 'outward'], help='which directions to walk (inward,outward)')
-    parser.add_argument('issues', nargs='+', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
+    parser.add_argument('-I', '--issues', dest='issues', nargs='+', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
 
     return parser.parse_args()
 
@@ -235,7 +233,8 @@ def main():
         graph = graph + build_graph_data(issue, jira, options.excludes, options.show_directions, options.directions, options.includes, options.closed, options.done)
 
     if options.local:
-        print_graph(filter_duplicates(graph))
+        #print_graph(filter_duplicates(graph))
+        print_graph(graph)
     else:
         create_graph_image(filter_duplicates(graph), options.image_file)
 
