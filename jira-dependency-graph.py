@@ -26,7 +26,7 @@ class JiraSearch(object):
     def __init__(self, url, auth):
         self.url = url + '/rest/api/latest'
         self.auth = auth
-        self.fields = ','.join(['key', 'issuetype', 'issuelinks', 'subtasks'])
+        self.fields = ','.join(['key', 'issuetype', 'issuelinks', 'subtasks', 'status'])
 
     def get(self, uri, params={}):
         headers = {'Content-Type' : 'application/json'}
@@ -53,7 +53,7 @@ class JiraSearch(object):
         return content['issues']
 
 
-def build_graph_data(start_issue_key, jira, excludes):
+def build_graph_data(start_issue_key, jira, excludes, done):
     """ Given a starting image key and the issue-fetching function build up the GraphViz data representing relationships
         between issues. This will consider both subtasks and issue links.
     """
@@ -99,31 +99,34 @@ def build_graph_data(start_issue_key, jira, excludes):
         seen.append(issue_key)
         children = []
         fields = issue['fields']
-        if fields['issuetype']['name'] == 'Epic':
-            issues = jira.query('"Epic Link" = "%s"' % issue_key)
-            for subtask in issues:
-                subtask_key = get_key(subtask)
-                log(subtask_key + ' => references epic => ' + issue_key)
-                node = '"%s"->"%s"[color=orange]' % (issue_key, subtask_key)
-                graph.append(node)
-                children.append(subtask_key)
-        if fields.has_key('subtasks'):
-            for subtask in fields['subtasks']:
-                subtask_key = get_key(subtask)
-                log(issue_key + ' => has subtask => ' + subtask_key)
-                node = '"%s"->"%s"[color=blue][label="subtask"]' % (issue_key, subtask_key)
-                graph.append(node)
-                children.append(subtask_key)
-        if fields.has_key('issuelinks'):
-            for other_link in fields['issuelinks']:
-                result = process_link(issue_key, other_link)
-                if result is not None:
-                    children.append(result[0])
-                    if result[1] is not None:
-                        graph.append(result[1])
-        # now construct graph data for all subtasks and links of this issue
+        if fields['status']['name'] != done:
+          if fields['issuetype']['name'] == 'Epic':
+              issues = jira.query('"Epic Link" = "%s"' % issue_key)
+              for subtask in issues:
+                  subtask_key = get_key(subtask)
+                  log(subtask_key + ' => references epic => ' + issue_key)
+                  node = '"%s"->"%s"[color=orange]' % (issue_key, subtask_key)
+                  graph.append(node)
+                  children.append(subtask_key)
+          if fields.has_key('subtasks'):
+              for subtask in fields['subtasks']:
+                  subtask_key = get_key(subtask)
+                  log(issue_key + ' => has subtask => ' + subtask_key)
+                  node = '"%s"->"%s"[color=blue][label="subtask"]' % (issue_key, subtask_key)
+                  graph.append(node)
+                  children.append(subtask_key)
+          if fields.has_key('issuelinks'):
+              for other_link in fields['issuelinks']:
+                  result = process_link(issue_key, other_link)
+                  if result is not None:
+                      children.append(result[0])
+                      if result[1] is not None:
+                          graph.append(result[1])
+          # now construct graph data for all subtasks and links of this issue
+        else:
+          log("leaving out %s" %  issue_key)
         for child in (x for x in children if x not in seen):
-            walk(child, graph)
+              walk(child, graph)
         return graph
 
     return walk(start_issue_key, [])
@@ -162,6 +165,7 @@ def parse_args():
     parser.add_argument('-f', '--file', dest='image_file', default='issue_graph.png', help='Filename to write image to')
     parser.add_argument('-l', '--local', action='store_true', default=False, help='Render graphviz code to stdout')
     parser.add_argument('-x', '--exclude-link', dest='excludes', default=[], action='append', help='Exclude link type(s)')
+    parser.add_argument('-d', '--hide-done', dest='done', default="", help='insert magical jira query')
     parser.add_argument('issue', nargs='?', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
 
     return parser.parse_args()
@@ -178,8 +182,8 @@ def main():
         auth = (options.user, options.password)
 
     jira = JiraSearch(options.jira_url, auth)
-
-    graph = build_graph_data(options.issue, jira, options.excludes)
+    log("%s" % options.done)
+    graph = build_graph_data(options.issue, jira, options.excludes, options.done)
 
     if options.local:
         print_graph(graph)
