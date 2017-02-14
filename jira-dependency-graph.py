@@ -8,6 +8,8 @@ import sys
 
 import requests
 
+from collections import OrderedDict
+
 # Using REST is pretty simple. The vast majority of this code is about the "other stuff": dealing with
 # command line options, formatting graphviz, calling Google Charts, etc. The actual JIRA REST-specific code
 # is only about 5 lines.
@@ -26,7 +28,7 @@ class JiraSearch(object):
     def __init__(self, url, auth):
         self.url = url + '/rest/api/latest'
         self.auth = auth
-        self.fields = ','.join(['key', 'issuetype', 'issuelinks', 'subtasks', 'status'])
+        self.fields = ','.join(['key', 'summary', 'assignee', 'status', 'description', 'issuetype', 'issuelinks', 'subtasks', 'status'])
 
     def get(self, uri, params={}):
         headers = {'Content-Type' : 'application/json'}
@@ -40,9 +42,10 @@ class JiraSearch(object):
     def get_issue(self, key):
         """ Given an issue key (i.e. JRA-9) return the JSON representation of it. This is the only place where we deal
             with JIRA's REST API. """
-        log('Fetching ' + key)
+       # log('Fetching ' + key)
         # we need to expand subtasks and links since that's what we care about here.
         response = self.get('/issue/%s' % key, params={'fields': self.fields})
+        response.raise_for_status()
         return response.json()
 
     def query(self, query):
@@ -53,14 +56,14 @@ class JiraSearch(object):
         return content['issues']
 
 
-def build_graph_data(start_issue_key, jira, excludes, done):
+def build_graph_data(start_issue_key, jira, excludes, show_directions, directions, includes, ignore_closed, done):
     """ Given a starting image key and the issue-fetching function build up the GraphViz data representing relationships
         between issues. This will consider both subtasks and issue links.
     """
     def get_key(issue):
         return issue['key']
 
-    def process_link(issue_key, link):
+    def process_link(fields, issue_key, link):
         if link.has_key('outwardIssue'):
             direction = 'outward'
         elif link.has_key('inwardIssue'):
@@ -68,12 +71,26 @@ def build_graph_data(start_issue_key, jira, excludes, done):
         else:
             return
 
-        if direction == 'inward':
+        if direction not in directions:
             return
 
         linked_issue = link[direction + 'Issue']
         linked_issue_key = get_key(linked_issue)
         link_type = link['type'][direction]
+
+        if ignore_closed:
+            if 'inwardIssue' in link:
+                log('Verifying linked key is not closed : ' + link['inwardIssue']['fields']['status']['name'])
+                if link['inwardIssue']['fields']['status']['name'] in 'Closed':
+                    return
+            if 'outwardIssue' in link:
+                log('Verifying linked key is not closed : ' + link['outwardIssue']['fields']['status']['name'])
+                if link['outwardIssue']['fields']['status']['name'] in 'Closed':
+                    return
+
+        if includes not in linked_issue_key:
+            return
+
 
         if link_type in excludes:
             return linked_issue_key, None
@@ -87,7 +104,13 @@ def build_graph_data(start_issue_key, jira, excludes, done):
         if link_type == "blocks":
             extra = ',color="red"'
 
-        node = '"%s"->"%s"[label="%s"%s]' % (issue_key, linked_issue_key, link_type, extra)
+        if direction not in show_directions:
+            node = None
+        else:
+            log ("Linked issue summary  " + linked_issue['fields']['summary'])
+            node = '"%s(%s)"->"%s(%s)"[label="%s"%s]' % (issue_key, fields['summary'], linked_issue_key, linked_issue['fields']['summary'], link_type, extra)
+
+
         return linked_issue_key, node
 
     # since the graph can be cyclic we need to prevent infinite recursion
@@ -96,32 +119,45 @@ def build_graph_data(start_issue_key, jira, excludes, done):
     def walk(issue_key, graph):
         """ issue is the JSON representation of the issue """
         issue = jira.get_issue(issue_key)
-        seen.append(issue_key)
         children = []
         fields = issue['fields']
-        if fields['status']['name'] != done:
+        seen.append(issue_key)
+        if fields['status']['name'] not in done:
+          if ignore_closed:
+              log('Verifying issue key ' + issue_key + ' is not closed : ' + issue['fields']['status']['name'])
+              if issue['fields']['status']['name'] in 'Closed':
+                  return graph
+
+          graph.append('"%s(%s)"' % (issue_key, fields['summary']))
+
           if fields['issuetype']['name'] == 'Epic':
               issues = jira.query('"Epic Link" = "%s"' % issue_key)
               for subtask in issues:
                   subtask_key = get_key(subtask)
                   log(subtask_key + ' => references epic => ' + issue_key)
-                  node = '"%s"->"%s"[color=orange]' % (issue_key, subtask_key)
-                  graph.append(node)
-                  children.append(subtask_key)
+                  node = '"%s(%s)"->"%s(%s)"[color=orange]' % (issue_key, fields['summary'], subtask_key, subtask['fields']['summary'] )
+                  if subtask['fields']['status']['name'] not in done: 
+                    graph.append(node)
+                    children.append(subtask_key)
           if fields.has_key('subtasks'):
               for subtask in fields['subtasks']:
                   subtask_key = get_key(subtask)
                   log(issue_key + ' => has subtask => ' + subtask_key)
-                  node = '"%s"->"%s"[color=blue][label="subtask"]' % (issue_key, subtask_key)
-                  graph.append(node)
-                  children.append(subtask_key)
+                  node = '"%s(%s)"->"%s(%s)"[color=blue][label="subtask"]' % (issue_key, fields['summary'], subtask_key, subtask['fields']['summary'])
+                  if subtask['fields']['status']['name'] not in done: 
+                    graph.append(node)
+                    children.append(subtask_key)
           if fields.has_key('issuelinks'):
               for other_link in fields['issuelinks']:
-                  result = process_link(issue_key, other_link)
+                  result = process_link(fields, issue_key, other_link)
                   if result is not None:
+                    log('Appending ' + result[0])
+                    issue = jira.get_issue(result[0])
+                    if issue['fields']['status']['name'] not in done:
                       children.append(result[0])
                       if result[1] is not None:
-                          graph.append(result[1])
+                        log("result[1]" + result[1])
+                        graph.append(result[1])
           # now construct graph data for all subtasks and links of this issue
         else:
           log("leaving out %s" %  issue_key)
@@ -165,11 +201,21 @@ def parse_args():
     parser.add_argument('-f', '--file', dest='image_file', default='issue_graph.png', help='Filename to write image to')
     parser.add_argument('-l', '--local', action='store_true', default=False, help='Render graphviz code to stdout')
     parser.add_argument('-x', '--exclude-link', dest='excludes', default=[], action='append', help='Exclude link type(s)')
-    parser.add_argument('-d', '--hide-done', dest='done', default="", help='insert magical jira query')
-    parser.add_argument('issue', nargs='?', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
+    parser.add_argument('-D', '--hide-done', dest='done', default=['Done', 'Closed', 'WONT DO'], help='insert magical jira query')
+    parser.add_argument('--ignore-closed', dest='closed', action='store_true', default=False, help='Ignore closed issues')
+    parser.add_argument('-i', '--issue-include', dest='includes', default='', help='Include issue keys')
+    parser.add_argument('-s', '--show-directions', dest='show_directions', default=['inward', 'outward'], help='which directions to show (inward,outward)')
+    parser.add_argument('-d', '--directions', dest='directions', default=['inward', 'outward'], help='which directions to walk (inward,outward)')
+    parser.add_argument('issues', nargs='+', help='The issue key (e.g. JRADEV-1107, JRADEV-1391)')
 
     return parser.parse_args()
 
+def filter_duplicates(lst):
+    # Enumerate the list to restore order lately; reduce the sorted list; restore order
+    def append_unique(acc, item):
+        return acc if acc[-1][1] == item[1] else acc.append(item) or acc
+    srt_enum = sorted(enumerate(lst), key=lambda (i, val): val)
+    return [item[1] for item in sorted(reduce(append_unique, srt_enum, [srt_enum[0]]))]
 
 def main():
     options = parse_args()
@@ -183,12 +229,15 @@ def main():
 
     jira = JiraSearch(options.jira_url, auth)
     log("%s" % options.done)
-    graph = build_graph_data(options.issue, jira, options.excludes, options.done)
+
+    graph = []
+    for issue in options.issues:
+        graph = graph + build_graph_data(issue, jira, options.excludes, options.show_directions, options.directions, options.includes, options.closed, options.done)
 
     if options.local:
-        print_graph(graph)
+        print_graph(filter_duplicates(graph))
     else:
-        create_graph_image(graph, options.image_file)
+        create_graph_image(filter_duplicates(graph), options.image_file)
 
 if __name__ == '__main__':
     main()

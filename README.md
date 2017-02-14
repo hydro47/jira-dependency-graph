@@ -1,7 +1,7 @@
 jira-dependency-graph
 =====================
 
-Graph visualizer for dependencies between JIRA tickets. Takes into account subtasks and issuelinks.
+Graph visualizer for dependencies between JIRA tickets. Takes into account subtasks and issue links.
 
 Uses JIRA rest API v2 for fetching information on issues.
 Uses [Google Chart API](https://developers.google.com/chart/) for graphical presentation.
@@ -9,41 +9,45 @@ Uses [Google Chart API](https://developers.google.com/chart/) for graphical pres
 Requirements:
 =============
 * Python 2.6+
-* [restkit](https://github.com/benoitc/restkit)
+* [requests](http://docs.python-requests.org/en/master/)
 
 Usage:
 ======
-    $ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
-    $ cd jira-dependency-graph
-    $ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site issue-key
+```bash
+$ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
+$ virtualenv .virtualenv && source .virtualenv/bin/activate # OPTIONAL
+$ pip install -r requirements.txt
+$ cd jira-dependency-graph
+$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site issue-key
 
-    # e.g.:
-    $ python jira-dependency-graph.py --user=pawelrychlik --password=s3cr3t --jira=https://your-company.jira.com JIRATICKET-718
-    
-    Fetching JIRATICKET-2451
-    JIRATICKET-2451 <= is blocked by <= JIRATICKET-3853
-    JIRATICKET-2451 <= is blocked by <= JIRATICKET-3968
-    JIRATICKET-2451 <= is blocked by <= JIRATICKET-3126
-    JIRATICKET-2451 <= is blocked by <= JIRATICKET-2977
-    Fetching JIRATICKET-3853
-    JIRATICKET-3853 => blocks => JIRATICKET-2451
-    JIRATICKET-3853 <= relates to <= JIRATICKET-3968
-    Fetching JIRATICKET-3968
-    JIRATICKET-3968 => blocks => JIRATICKET-2451
-    JIRATICKET-3968 => relates to => JIRATICKET-3853
-    Fetching JIRATICKET-3126
-    JIRATICKET-3126 => blocks => JIRATICKET-2451
-    JIRATICKET-3126 => testing discovered => JIRATICKET-3571
-    Fetching JIRATICKET-3571
-    JIRATICKET-3571 <= discovered while testing <= JIRATICKET-3126
-    Fetching JIRATICKET-2977
-    JIRATICKET-2977 => blocks => JIRATICKET-2451
+# e.g.:
+$ python jira-dependency-graph.py --user=pawelrychlik --password=s3cr3t --jira=https://your-company.jira.com JIRATICKET-718
 
-    Google Chart request:
-    http://chart.apis.google.com/chart?cht=gv&chl=digraph{"JIRATICKET-2451"->"JIRATICKET-3853"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-3968"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-3126"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-2977"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-3853"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3853"->"JIRATICKET-3968"[arrowhead=empty][label="relates+to"];"JIRATICKET-3968"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3968"->"JIRATICKET-3853"[arrowhead=empty][label="relates+to"];"JIRATICKET-3126"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3126"->"JIRATICKET-3571"[arrowhead=empty][label="testing+discovered"];"JIRATICKET-3571"->"JIRATICKET-3126"[arrowhead=empty][label="discovered+while+testing"]    ;"JIRATICKET-2977"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"]}
+Fetching JIRATICKET-2451
+JIRATICKET-2451 <= is blocked by <= JIRATICKET-3853
+JIRATICKET-2451 <= is blocked by <= JIRATICKET-3968
+JIRATICKET-2451 <= is blocked by <= JIRATICKET-3126
+JIRATICKET-2451 <= is blocked by <= JIRATICKET-2977
+Fetching JIRATICKET-3853
+JIRATICKET-3853 => blocks => JIRATICKET-2451
+JIRATICKET-3853 <= relates to <= JIRATICKET-3968
+Fetching JIRATICKET-3968
+JIRATICKET-3968 => blocks => JIRATICKET-2451
+JIRATICKET-3968 => relates to => JIRATICKET-3853
+Fetching JIRATICKET-3126
+JIRATICKET-3126 => blocks => JIRATICKET-2451
+JIRATICKET-3126 => testing discovered => JIRATICKET-3571
+Fetching JIRATICKET-3571
+JIRATICKET-3571 <= discovered while testing <= JIRATICKET-3126
+Fetching JIRATICKET-2977
+JIRATICKET-2977 => blocks => JIRATICKET-2451
 
-    Writing to issue_graph.png
+Google Chart request:
+http://chart.apis.google.com/chart?cht=gv&chl=digraph{"JIRATICKET-2451"->"JIRATICKET-3853"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-3968"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-3126"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-2451"->"JIRATICKET-2977"[arrowhead=empty][label="is+blocked+by"];"JIRATICKET-3853"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3853"->"JIRATICKET-3968"[arrowhead=empty][label="relates+to"];"JIRATICKET-3968"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3968"->"JIRATICKET-3853"[arrowhead=empty][label="relates+to"];"JIRATICKET-3126"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"];"JIRATICKET-3126"->"JIRATICKET-3571"[arrowhead=empty][label="testing+discovered"];"JIRATICKET-3571"->"JIRATICKET-3126"[arrowhead=empty][label="discovered+while+testing"]    ;"JIRATICKET-2977"->"JIRATICKET-2451"[arrowhead=empty][label="blocks"]}
 
+Writing to issue_graph.png
+
+```
 Result:
 ![Example result](examples/issue_graph.png)
 
@@ -51,21 +55,59 @@ Local Usage:
 ============
 If you have issues with the Google Graphviz API limitations you can use your local graphviz installation like this:
 
-    $ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
-    $ cd jira-dependency-graph
-    $ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --local issue-key | dot -Tpng > issue_graph.png
+```bash
+$ git clone https://github.com/pawelrychlik/jira-dependency-graph.git
+$ cd jira-dependency-graph
+$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --local issue-key | dot -Tpng > issue_graph.png
+```
 
-Advanved Usage:
+*Note*: Its possible that the graph produced is too wide if you have a number of issues. In this case, it is better to firstly pipe the graph to a 'dot' text file e.g.
+
+```bash
+$ python jira-dependency-graph.py --jira=url-of-your-jira-site --local issue-key > graph.dot
+```
+
+and then process it using `unflatten`:
+
+```bash
+unflatten -f -l 4 -c 16 graph.dot  | dot | gvpack -array_t6 | neato -s -n2 -Tpng -o graph.png
+```
+
+Advanced Usage:
 ===============
+
+### Excluding Links
+
 In case you have specific issue links you don't want to see in your graph, you can exclude them:
 
-    $ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --exclude-link 'is required by' --exclude-link 'duplicates' issue-key
+```bash
+$ python jira-dependency-graph.py --user=your-jira-username --password=your-jira-password --jira=url-of-your-jira-site --exclude-link 'is required by' --exclude-link 'duplicates' issue-key
+```
 
 The grapher will still walk the link, just exclude the edge. This especially useful for bidirectional links and you only
 want to see one of them, e.g. *depends on* and *is required by*.
+
+### Including Issues
+
+In order to only specify issues with a certain prefix pass in `--issue-include <XXX>` and all tickets will be checked that they match the prefix `XXX`.
+
+### Authentication
+
+It is possible to either use the username/password combination or to login via the browser passing in `--cookie <JSESSIONID>`. This logins via the browser and is useful in scenarios where Kerberos authentication is required.
+
+### Closed Issues
+
+By passing in `--ignore-closed` the system will ignore any ticket that is closed.
+
+### Multiple Issues
+
+Multiple issue-keys can be passed in via space separated format e.g.
+```bash
+$ python jira-dependency-graph.py --cookie <JSESSIONID> issue-key1 issue-key2
+```
 
 Notes:
 ======
 Based on: [draw-chart.py](https://developer.atlassian.com/download/attachments/4227078/draw-chart.py) and [Atlassian JIRA development documentation](https://developer.atlassian.com/display/JIRADEV/JIRA+REST+API+Version+2+Tutorial#JIRARESTAPIVersion2Tutorial-Example#1:GraphingImageLinks), which seemingly was no longer compatible with JIRA REST API Version 2.
 
-There is a limit on the query lenght: "The longest URL that Google accepts in a chart GET request is 2048 characters in length, after URL-encoding" (from [faq](https://developers.google.com/chart/image/faq)).
+There is a limit on the query length: "The longest URL that Google accepts in a chart GET request is 2048 characters in length, after URL-encoding" (from [faq](https://developers.google.com/chart/image/faq)).
