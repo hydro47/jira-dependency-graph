@@ -81,11 +81,11 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         if ignore_closed:
             if 'inwardIssue' in link:
                 log('Verifying linked key is not closed : ' + link['inwardIssue']['fields']['status']['name'])
-                if link['inwardIssue']['fields']['status']['name'] in 'Closed':
+                if link['inwardIssue']['fields']['status']['name'] in done:
                     return
             if 'outwardIssue' in link:
                 log('Verifying linked key is not closed : ' + link['outwardIssue']['fields']['status']['name'])
-                if link['outwardIssue']['fields']['status']['name'] in 'Closed':
+                if link['outwardIssue']['fields']['status']['name'] in done:
                     return
 
         if includes not in linked_issue_key:
@@ -125,7 +125,7 @@ def build_graph_data(start_issue_key, jira, excludes, show_directions, direction
         if fields['status']['name'] not in done:
           if ignore_closed:
               log('Verifying issue key ' + issue_key + ' is not closed : ' + issue['fields']['status']['name'])
-              if issue['fields']['status']['name'] in 'Closed':
+              if issue['fields']['status']['name'] in done:
                   return graph
 
           graph.append('"%s(%s)"' % (issue_key, fields['summary']))
